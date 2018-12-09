@@ -1,0 +1,1 @@
+gcc -o "d" diskprocess.c
