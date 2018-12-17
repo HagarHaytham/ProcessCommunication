@@ -1,1 +1,2 @@
 gcc -o "d" diskprocess.c
+gcc -std=gnu11 -o "d" diskprocess.c
