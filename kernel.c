@@ -11,6 +11,10 @@
 #include <unistd.h>
 #include <signal.h>
 #include<vector>
+const int disk_type =0;
+const int process_type=1;
+const int up=99;
+const int down=100;
 struct msgbuff
 {
    long mtype; // must be long
@@ -21,13 +25,27 @@ struct msgbuff
 int main()
 {
 	vector <msgbuff> log;
-	upMsgqId = msgget(99, IPC_CREAT|0644);//99 for up // dummy values 
-	downMsgqId = msgget(100, IPC_CREAT|0644);// 100 for down // kernel should have the same keys
-	int groub_id;
-	getpgid(groub_id);	
+	upMsgqId = msgget(up, IPC_CREAT|0644);//99 for up // dummy values 
+	downMsgqId = msgget(down, IPC_CREAT|0644);// 100 for down // kernel should have the same keys
+	
+	int disk_id;
+	int process_id;
+	struct msgbuff first_message;
+	for(int i =0 ;i<2 ;i++)
+	{
+	
+	recieve = msgrcv(upMsgqId, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT);   // receive on up , send on down
+
+	    if(first_message.mtype == disk_type)
+	    	disk_id=first_message.mtext;
+   	    else if(first_message.mtype == process_type)
+	    	process_id=first_message.mtext;
+
+	}
 	int clk=0;
 	while(1)
 	{
+	
 	killpg(groub_id,SIGUSR2);
 	struct msgbuff message;
 
