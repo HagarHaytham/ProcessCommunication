@@ -116,7 +116,7 @@ bool CheckAvailableMsg()
 {
     msg = "";
     for(unsigned i = 0; i<inputList.size(); i++){
-        if(inputList[i].time == clk){
+        if(inputList[i].time <= clk){
             if(inputList[i].operation == "ADD")
                 msg += "A";
             else
