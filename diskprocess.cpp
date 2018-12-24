@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <stdbool.h> 
+#include <cstring>
 #define NoOfSlots 10
 using namespace std;
 struct msgbuff
@@ -19,18 +20,7 @@ struct msgbuff
 	long mtype; // must be long
 	char mtext[64];
 };
-//const int NoOfSlots=10;// this is not really a const in c ,, can't use it 
 int prev_clk=-1,clk=-1;
-int diskStatus =6;// disk status 
-// succ add 0
-// succ del 1
-// add failed 2
-//deletion failed 3
-// Adding takes 3 clks?
-//deletion takes 1 clk?
-// adding 4
-// deleting 5
-// nothing 6
 int freeSlots=10;
 key_t upMsgqId,downMsgqId;
 bool slotfull[NoOfSlots];
@@ -51,17 +41,15 @@ void SendMsg(int signum) // Handler for SIGUSR1
 
 	struct msgbuff message;
 
-	message.mtype = diskStatus;
+	message.mtype = getpid();    ///
 
-	// itoa is not standard function !! can't use it under linux
-	//itoa(freeSlots, str, 10);// base 10 decimal
-
-	// message txt is no of free slots
-	int length = snprintf( NULL, 0, "%d", freeSlots );
-	char* str = new char [length+1];
-	snprintf( str, length + 1, "%d", freeSlots );
-	strcpy(message.mtext, str);
-
+	string msg ="";
+	for (int i=0;i<NoOfSlots;i++)
+		if (slotfull[i])
+			msg+= "1";
+		else
+			msg+="0";
+	strcpy(message.mtext, msg.c_str());
 	// busy wait until msg sent // should i ?
 	cout<<" sending response to kernel "<<endl;
 	send_val = msgsnd(upMsgqId, &message, sizeof(message.mtext), IPC_NOWAIT);
@@ -69,7 +57,7 @@ void SendMsg(int signum) // Handler for SIGUSR1
 	if(send_val == -1)
 		perror("Error in send");
 	else
-	cout<<" response sent "<<message.mtext<<endl;
+	cout<<" response sent FreeSlots  :"<<message.mtext<<endl;
 }
 
 char  * RemoveFirstLetter(char *msg)
@@ -92,7 +80,7 @@ void sendMyID()
 	struct msgbuff message;
 
 	message.mtype = myId;
-	strcpy(message.mtext,"dp");///// check that with reham
+	strcpy(message.mtext,"d");///// check that with reham
 	
 	// busy wait until msg sent 
 	send_val = msgsnd(upMsgqId, &message, sizeof(message.mtext), IPC_NOWAIT);
@@ -104,43 +92,27 @@ void Add(char * msg)
 {
 	// searches for an empty slot and adds the msg in it
 	// takes 3 secs
-	int begin =clk; // begin now
-	diskStatus =4;//adding
 	int i=0;
 	while (slotfull[i] && i<NoOfSlots) // false :empty , true :full
 		i++;
-	while (begin +3 >clk)
-		continue;// just wait 3 seconds to add
-	if (i==NoOfSlots) 
-		diskStatus=2;// failed to add
-	else
+	if (i!=NoOfSlots) 
 	{
 		strcpy(Slots[i],msg);
 		freeSlots-=1;
 		slotfull[i]=true;
-		diskStatus=0;// successful add
 	}
-
-
 }
 void Delete(int slotno)
 {
 	// deletes the msg in the slot no given
 	//takes 1 sec
-	int begin = clk;
-	diskStatus= 5;//deleting
-	while (begin +1 >clk)
-		continue;// just wait 1 seconds to delete
 	if (slotno<NoOfSlots && slotfull[slotno])
 	{
 		//delete the char *
 		memset(Slots[slotno], '\0', sizeof(Slots[slotno]));
 		freeSlots+=1;
 		slotfull[slotno]=false;
-		diskStatus=1; // successful delete
 	}
-	else
-		diskStatus=3; // failed to delete
 }
 
 // recieve via down queue
