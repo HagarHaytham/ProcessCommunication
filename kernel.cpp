@@ -70,7 +70,7 @@ int disk_status()
 	if(recieve != -1 )
 	{
 
-		return message.mtext;
+		//return message.mtext;
 		disk_status_log.push_back(message.mtext[0]);
 		// get free slots
 		int FreeSlots =atoi(message.mtext);
@@ -100,7 +100,7 @@ int process_request(struct msgbuff message)
 
 				
 				strcpy(kernel_response.mtext,"1");
-				int send = msgsnd(queue, &message, sizeof(message.mtext), IPC_NOWAIT);
+				int send = msgsnd(down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
 				cout<<"message.mtext "<<message.mtext<<endl;
 				disk_log.push_back(message);
 				latency=1;
@@ -155,10 +155,10 @@ int main()
 	cout<<" recieved message "<<message.mtext<<endl;
 	int i=0;
 	for(i=0;i<process_list.size();i++)
-		if(message.mtype == process_list[i].mtype)
+		if(message.mtype == process_list[i])
 			break;
 	if(i==process_list.size())
-	process_list[i].push_back();
+	process_list.push_back(message.mtype);
 	message_log.push_back(message);
 	}
 	
