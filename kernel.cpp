@@ -28,8 +28,7 @@ const int disk_type =0;
 const int process_type=1;
 const int disk_up=99;
 const int disk_down=100;
-const int process_up=199;
-const int process_down=200;
+
 int disk_id;
 int process_counter=0;
 vector <msgbuff> message_log;
@@ -37,10 +36,8 @@ vector <msgbuff> disk_log;
 vector <char *> response_log;
 vector <int> disk_status_log;
 vector <long> process_list;
-int disk_up_queue = msgget(disk_up, IPC_CREAT|0644);//99 for up // dummy values 
-int disk_down_queue = msgget(disk_down, IPC_CREAT|0644);// 100 for down // kernel should have the same keys
-int process_up_queue = msgget(process_up, IPC_CREAT|0644);//99 for up // dummy values 
-int process_down_queue = msgget(process_down, IPC_CREAT|0644);// 100 for down // kernel should have the same keys
+int up_queue = msgget(disk_up, IPC_CREAT|0644);//99 for up // dummy values 
+int down_queue = msgget(disk_down, IPC_CREAT|0644);// 100 for down // kernel should have the same keys
 
 int get_time()
 {
@@ -55,23 +52,24 @@ void initialize(int disk_up_queue,int process_up_queue)
 	printf("didn't get The ID From DISK yet");
 	struct msgbuff first_message;
 	cout<<"up queue id = "<<disk_up_queue<<endl;
-	int recieve = msgrcv(disk_up_queue, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT);   // receive on up , send on down
-	disk_id=first_message.mtype;
+	for(int i=0;i<2;i++)
+	{
+	int recieve = msgrcv(up_queue, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT);   // receive on up , send on down
+	if(first_message.mtext[0]=='D')
+		disk_id=first_message.mtype;
+	else if(first_message.mtext[0]=='P')
+		process_list[process_counter++]=first_message.mtype;
+	}
 	cout<<"GOT The ID From DISK , READY FOR comm "<<disk_id<<endl;
-	cout<<"up queue id = "<<process_up_queue<<endl;
-	recieve = msgrcv(process_up_queue, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT); // receive on up , send on down   
-	cout<<"GOT The ID From process , READY FOR comm "<<disk_id<<endl;
-	process_list.push_back(first_message.mtype);
-
 }
 int disk_status()
 {
 	struct msgbuff message;
-	int recieve = msgrcv(disk_up_queue, &message, sizeof(message.mtext),0, !IPC_NOWAIT); 
+	int recieve = msgrcv(up_queue, &message, sizeof(message.mtext),disk_id, !IPC_NOWAIT); 
 	if(recieve != -1 )
 	{
-		return message.mtext[0];
-		disk_status_log.push_back(message.mtext[0]);
+		return message.mtext;
+		disk_status_log.push_back((int)message.mtext);
 	}
 	return -1;
 }
@@ -87,42 +85,34 @@ int process_request(struct msgbuff message)
 		
 		if( disk_response!=-1 )
 		{
-			
-			if(message.mtext[0] == 'D' && disk_response >0)
+			kernel_response.mtype=message.mtype;
+			message.mtype=disk_id;
+			if(message.mtext[0] == 'D' && disk_response >10)
 			{
-				//char * str = "1";
-				strcpy(kernel_response.mtext,"1");
-				//kernel_response.mtext="1";
 				
-				int send = msgsnd(disk_down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
+				kernel_response.mtext[0]='1';
+				int send = msgsnd(down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
 				cout<<"message.mtext "<<message.mtext<<endl;
 				disk_log.push_back(message);
 				latency=1;
 			}
-			else 	
-				{
-					//char * str = "3";
-					strcpy(kernel_response.mtext,"3");
-				}
-				//kernel_response.mtext="3";
+			
+			else	kernel_response.mtext[0]='3';
 			if(message.mtext[0] == 'A' && disk_response <10)
 			{
-				//char * str = "0";
-				strcpy(kernel_response.mtext,"0");
-				//kernel_response.mtext="0";
-				int send = msgsnd(disk_down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
+				
+				
+				kernel_response.mtext[0]='0';
+				int send = msgsnd(down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
 				cout<<"message.mtext "<<message.mtext<<endl;
 				disk_log.push_back(message);
 				latency=3;
 			}
 			else 	
-			{
-				//char * str = "2";
-				strcpy(kernel_response.mtext,"2");
-				//kernel_response.mtext="2";
-			}
-			kernel_response.mtype=message.mtype;
-			int send = msgsnd(process_down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
+			
+				kernel_response.mtext[0]='2';
+		
+			int send = msgsnd(down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
 			cout<<"kernel_response.mtext "<<kernel_response.mtext<<endl;
 			response_log.push_back(kernel_response.mtext);
 		}
@@ -138,7 +128,7 @@ int main()
 {
 
 	printf("Begin Of Kernel MAIN \n");
-	initialize(disk_up_queue,process_up_queue);
+	initialize(up_queue,up_queue);
 	
 	int clk=-1;
 	int current_time=0;
@@ -148,11 +138,16 @@ int main()
 	while(1)
 {
 	current_time=get_time();
-	int recieve = msgrcv(process_up_queue, &message, sizeof(message.mtext),0, IPC_NOWAIT);  
+	int recieve = msgrcv(up_queue, &message, sizeof(message.mtext),0, IPC_NOWAIT);  
 	if(recieve !=-1 )
 	{
 	cout<<" recieved message "<<message.mtext<<endl;
-	process_list.push_back(message.mtype);
+	int i=0;
+	for(i=0;i<process_list.size();i++)
+		if(message.mtype == process_list[i].mtype)
+			break;
+	if(i==process_list.size())
+	process_list[i].push_back();
 	message_log.push_back(message);
 	}
 	
@@ -173,8 +168,6 @@ int main()
 		}
 	}	
 }
-
-
 	return 0;
 }
 
