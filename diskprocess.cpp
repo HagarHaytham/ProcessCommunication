@@ -1,3 +1,4 @@
+#include<iostream>
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
@@ -12,7 +13,7 @@
 #include <signal.h>
 #include <stdbool.h> 
 #define NoOfSlots 10
-
+using namespace std;
 struct msgbuff
 {
 	long mtype; // must be long
@@ -61,11 +62,13 @@ void SendMsg(int signum) // Handler for SIGUSR1
 	strcpy(message.mtext, str);
 
 	// busy wait until msg sent // should i ?
-	send_val = msgsnd(upMsgqId, &message, sizeof(message.mtext), !IPC_NOWAIT);
+	cout<<" sending response to kernel "<<endl;
+	send_val = msgsnd(upMsgqId, &message, sizeof(message.mtext), IPC_NOWAIT);
 
 	if(send_val == -1)
 		perror("Error in send");
-
+	else
+	cout<<" response sent "<<endl;
 }
 
 char  * RemoveFirstLetter(char *msg)
@@ -91,7 +94,7 @@ void sendMyID()
 	strcpy(message.mtext,"dp");///// check that with reham
 	
 	// busy wait until msg sent 
-	send_val = msgsnd(upMsgqId, &message, sizeof(message.mtext), !IPC_NOWAIT);
+	send_val = msgsnd(upMsgqId, &message, sizeof(message.mtext), IPC_NOWAIT);
 	printf("Sending MY Id to Kernel %d\n",myId);
 	if(send_val == -1)
 		perror("Errror in send");
@@ -147,14 +150,15 @@ void RecieveMsg()
 
 	//rec_val=1;// ay klam delwa2ty
 	/* receive all types of messages */
-	rec_val = msgrcv(downMsgqId, &message, sizeof(message.mtext),0, !IPC_NOWAIT);  
+	rec_val = msgrcv(downMsgqId, &message, sizeof(message.mtext),0, IPC_NOWAIT);  
 
+	//if(rec_val == -1)
+		//perror("Error in receive");
 	if(rec_val == -1)
-		perror("Error in receive");
-	else
 	{
 		char *str;
 		strcpy(str,message.mtext);
+		cout<<" recieved "<<message.mtext<<endl;
 		if (str[0]=='A')
 		{
 			// ashel awel 7rf
@@ -181,9 +185,10 @@ int main()
 	signal(SIGUSR1,SendMsg);
 	memset(slotfull ,0, sizeof(slotfull[0]) * NoOfSlots); // all slots are empty at the begining
 	// first msg sent to kernel is my id to let it communicate with me through signals
-	sendMyID();
+	
 	upMsgqId = msgget(99, IPC_CREAT|0644);//99 for up // dummy values 
 	downMsgqId = msgget(100, IPC_CREAT|0644);// 100 for down // kernel should have the same keys
+	sendMyID();
 	if(upMsgqId == -1 ||downMsgqId == -1 ){	
 		perror("Error in create");
 		exit(-1);}

@@ -38,7 +38,8 @@ key_t upMsgqId,
 
 // Handler for SIGUSR2
 void IncClk(int signum) 
-{
+
+{	//cout<<" a second passed  "<<endl;
 	clk++;
 }
 
@@ -55,8 +56,9 @@ void SendMsg()
 	strcpy(message.mtext, msg.c_str());
 
 	// busy wait until msg sent
-	send_val = msgsnd(upMsgqId, &message, sizeof(message.mtext), !IPC_NOWAIT);
-
+	cout<<" sending message to kernel "<<message.mtext<<endl;
+	send_val = msgsnd(upMsgqId, &message, sizeof(message.mtext), IPC_NOWAIT);
+	cout<<" done sending"<<endl;
 	if(send_val == -1)
 		perror("Errror in send");
 
@@ -71,10 +73,10 @@ void RecieveMsg()
 	/* receive all types of messages */
 	rec_val = msgrcv(downMsgqId, &message, sizeof(message.mtext),getpid(), !IPC_NOWAIT);  
 
-	if(rec_val == -1)
-		perror("Error in receive");
+	//if(rec_val == -1)
+	//	perror("Error in receive");
     //modify ??
-    else if (message.mtext == "0")
+    if (message.mtext == "0")
         cout << "Successful ADD\n";
     else if (message.mtext == "1")
         cout << "Successful DEL\n";
@@ -131,7 +133,8 @@ int main()
     signal(SIGUSR2,IncClk);
          
     cout << "Please enter the file name\n"; //modify ??
-    cin >> fileName;
+    //cin >> fileName;
+    fileName="input.txt";
     if(!InputRead(fileName)) return 0;
     
     //modify ??

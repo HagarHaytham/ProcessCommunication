@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+#include<iostream>
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
@@ -36,7 +36,7 @@ vector <msgbuff> message_log;
 vector <msgbuff> disk_log;
 vector <int> response_log;
 vector <int> disk_status_log;
-vector <int> process_list;
+vector <long> process_list;
 int disk_up_queue = msgget(disk_up, IPC_CREAT|0644);//99 for up // dummy values 
 int disk_down_queue = msgget(disk_down, IPC_CREAT|0644);// 100 for down // kernel should have the same keys
 int process_up_queue = msgget(process_up, IPC_CREAT|0644);//99 for up // dummy values 
@@ -54,10 +54,13 @@ void initialize(int disk_up_queue,int process_up_queue)
 {
 	printf("didn't get The ID From DISK yet");
 	struct msgbuff first_message;
+	cout<<"up queue id = "<<disk_up_queue<<endl;
 	int recieve = msgrcv(disk_up_queue, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT);   // receive on up , send on down
 	disk_id=first_message.mtype;
-	printf("GOT The ID From DISK , READY FOR comm %d",disk_id);
+	cout<<"GOT The ID From DISK , READY FOR comm "<<disk_id<<endl;
+	cout<<"up queue id = "<<process_up_queue<<endl;
 	recieve = msgrcv(process_up_queue, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT); // receive on up , send on down   
+	cout<<"GOT The ID From process , READY FOR comm "<<disk_id<<endl;
 	process_list.push_back(first_message.mtype);
 
 }
@@ -75,24 +78,19 @@ int disk_status()
 int process_request(struct msgbuff message)
 {
 	int latency=0;
-	if(message.mtext[0] == 'I')
-	{
-		process_list[process_counter++]=(int)message.mtype;
 
-	}
-	else
-	{ 
 		struct msgbuff kernel_response;
 
 		killpg(disk_id,SIGUSR1);
 		int disk_response=disk_status();
-
+		cout<<"disk_response "<<disk_response<<endl;
 		if( disk_response!=-1 )
 		{
 
 			if(message.mtext[0] == 'D' && disk_response >0)
 			{
 				kernel_response.mtext[0]=1;
+				
 				int send = msgsnd(disk_down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
 				disk_log.push_back(message);
 				latency=1;
@@ -111,7 +109,7 @@ int process_request(struct msgbuff message)
 			response_log.push_back(kernel_response.mtext[0]);
 		}
 
-	}
+
 	return 	latency;
 
 }
@@ -135,10 +133,14 @@ int main()
 	int recieve = msgrcv(process_up_queue, &message, sizeof(message.mtext),0, IPC_NOWAIT);  
 	if(recieve !=-1 )
 	{
+	cout<<" recieved message "<<message.mtext<<endl;
+	process_list.push_back(message.mtype);
 	message_log.push_back(message);
 	}
+	
 	if(current_time-prev_time == 1)
 	{
+	
 	prev_time = current_time;
 	clk++;
 	if(latency > 0)
