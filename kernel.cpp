@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
@@ -14,6 +15,15 @@
 #include <vector>
 #include <string>
 using namespace std;
+using namespace std::chrono;
+
+struct msgbuff
+{
+
+   long mtype; // must be long
+   char mtext[64];
+};
+
 const int disk_type =0;
 const int process_type=1;
 const int disk_up=99;
@@ -22,88 +32,23 @@ const int process_up=199;
 const int process_down=200;
 int disk_id;
 int process_counter=0;
-vector <string> message_log;
+vector <msgbuff> message_log;
+vector <msgbuff> disk_log;
+vector <int> response_log;
+vector <int> disk_status_log;
 vector <int> process_list;
 int disk_up_queue = msgget(disk_up, IPC_CREAT|0644);//99 for up // dummy values 
 int disk_down_queue = msgget(disk_down, IPC_CREAT|0644);// 100 for down // kernel should have the same keys
 int process_up_queue = msgget(process_up, IPC_CREAT|0644);//99 for up // dummy values 
 int process_down_queue = msgget(process_down, IPC_CREAT|0644);// 100 for down // kernel should have the same keys
-struct msgbuff
-{
-
-   long mtype; // must be long
-   char request_type;
-   char mtext[64];
-};
 
 int get_time()
 {
 	seconds s = duration_cast< seconds >(system_clock::now().time_since_epoch());
-	int time=s.count();
+	int time= s.count();
 	return time;
 }
 
-
-void initialize(int disk_up_queue,int process_up_queue)
-{
-	struct msgbuff first_message;
-        int recieve = msgrcv(disk_up_queue, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT);   // receive on up , send on down
-      	disk_id=first_message.mtype;
-	recieve = msgrcv(process_up_queue, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT); // receive on up , send on down   
-	process_list.push_back(first_message.mtype);
-	
-}
-int disk_status()
-{
-struct msgbuff message;
-int recieve = msgrcv(disk_up_queue, &message, sizeof(message.mtext),0, !IPC_NOWAIT); 
-if(recieve != -1 && message.mtype==disk_id )
-return message.request_type;
-return -1;
-}
-int process_request(struct msgbuff message)
-{
-int latency=0;
-if(message.request_type == 'I')
-{
-	process_list[process_counter++]=(int)message.mtype;
-
-}
-else
-{ 
-	struct msgbuff kernel_response;
-
-	killpg(disk_id,SIGUSR1);
-	int disk_response=disk_status();
-
-	if( disk_response!=-1 )
-	{
-
-	if(message.request_type == 'D' && disk_response >0)
-	{
-		kernel_response.request_type=1;
-		int send = msgsnd(disk_down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
-		latency=1;
-	}
-	else 	kernel_response.request_type=3;
-	if(message.request_type == 'A' && disk_response <10)
-	{
-		kernel_response.request_type=0;
-		int send = msgsnd(disk_down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
-		latency=3;
-	}
-	else 	kernel_response.request_type=2;
-	kernel_response.mtype=message.mtype;
-	int send = msgsnd(process_down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
-	}
-
-}
-return 	latency;
-
-	long mtype; // must be long
-	char request_type;
-	char mtext[64];
-};
 
 void initialize(int disk_up_queue,int process_up_queue)
 {
@@ -121,13 +66,16 @@ int disk_status()
 	struct msgbuff message;
 	int recieve = msgrcv(disk_up_queue, &message, sizeof(message.mtext),0, !IPC_NOWAIT); 
 	if(recieve != -1 && message.mtype==disk_id )
-		return message.request_type;
+	{
+		return message.mtext[0];
+		disk_status_log.push_back(message.mtext[0]);
+	}
 	return -1;
 }
 int process_request(struct msgbuff message)
 {
 	int latency=0;
-	if(message.request_type == 'I')
+	if(message.mtext[0] == 'I')
 	{
 		process_list[process_counter++]=(int)message.mtype;
 
@@ -142,22 +90,25 @@ int process_request(struct msgbuff message)
 		if( disk_response!=-1 )
 		{
 
-			if(message.request_type == 'D' && disk_response >0)
+			if(message.mtext[0] == 'D' && disk_response >0)
 			{
-				kernel_response.request_type=1;
-				int send = msgsnd(disk_down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
+				kernel_response.mtext[0]=1;
+				int send = msgsnd(disk_down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
+				disk_log.push_back(message);
 				latency=1;
 			}
-			else 	kernel_response.request_type=3;
-			if(message.request_type == 'A' && disk_response <10)
+			else 	kernel_response.mtext[0]=3;
+			if(message.mtext[0] == 'A' && disk_response <10)
 			{
-				kernel_response.request_type=0;
-				int send = msgsnd(disk_down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
+				kernel_response.mtext[0]=0;
+				int send = msgsnd(disk_down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
+				disk_log.push_back(message);
 				latency=3;
 			}
-			else 	kernel_response.request_type=2;
+			else 	kernel_response.mtext[0]=2;
 			kernel_response.mtype=message.mtype;
 			int send = msgsnd(process_down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
+			response_log.push_back(kernel_response.mtext[0]);
 		}
 
 	}
@@ -173,32 +124,37 @@ int main()
 	printf("Begin Of Kernel MAIN \n");
 	initialize(disk_up_queue,process_up_queue);
 	
-	int clk=0;
+	int clk=-1;
 	int current_time=0;
+	int latency=0;
+	struct msgbuff message;
 	int prev_time=get_time();
 	while(1)
-	{
-	int current_time=get_time();
-	for(int i=0;i<process_list.size();i++)
-	killpg(process_list[i],SIGUSR2);
-	
-	struct msgbuff message;
-	int latency=0;
+{
+	current_time=get_time();
 	int recieve = msgrcv(process_up_queue, &message, sizeof(message.mtext),0, IPC_NOWAIT);  
 	if(recieve !=-1 )
 	{
-	message_log.push_back(message.request_type+" "+(string)message.mtext);
-	
-	latency=process_request(message);
+	message_log.push_back(message);
 	}
-	if(latency !=0 )
-		clk+=latency;
-	else if(current_time-prev_time == 1)
+	if(current_time-prev_time == 1)
 	{
-		clk++;
-		prev_time = current_time;
-	}
-	
-	}
+	prev_time = current_time;
+	clk++;
+	if(latency > 0)
+	latency--;
+	for(int i=0;i<process_list.size();i++)
+	killpg(process_list[i],SIGUSR2);
+	killpg(disk_id,SIGUSR2);
+	for(int i=0;i<message_log.size();i++)
+		{
+		if(latency ==0)
+		latency=process_request(message);
+		}
+	}	
+}
+
+
 	return 0;
 }
+
