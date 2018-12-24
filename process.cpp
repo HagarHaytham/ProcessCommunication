@@ -85,7 +85,7 @@ void RecieveMsg()
         cout << "Successful DEL\n";
     else if (message.mtext == "2")
         cout << "Unable ADD\n";
-    else
+    else if (message.mtext == "3")
         cout << "Unable DEL\n";
 }
 
@@ -135,7 +135,7 @@ int main()
 	printf("Begin Of Process MAIN \n");
     string fileName = "";
     //when the process receives SIGUSR2 it increments the clk variable
-    signal(SIGUSR2,IncClk);
+    //signal(SIGUSR2,IncClk);
          
     //cout << "Please enter the file name\n"; //modify ??
     //cin >> fileName;
