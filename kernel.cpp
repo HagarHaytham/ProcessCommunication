@@ -34,7 +34,7 @@ int disk_id;
 int process_counter=0;
 vector <msgbuff> message_log;
 vector <msgbuff> disk_log;
-vector <int> response_log;
+vector <char *> response_log;
 vector <int> disk_status_log;
 vector <long> process_list;
 int disk_up_queue = msgget(disk_up, IPC_CREAT|0644);//99 for up // dummy values 
@@ -68,7 +68,7 @@ int disk_status()
 {
 	struct msgbuff message;
 	int recieve = msgrcv(disk_up_queue, &message, sizeof(message.mtext),0, !IPC_NOWAIT); 
-	if(recieve != -1 && message.mtype==disk_id )
+	if(recieve != -1 )
 	{
 		return message.mtext[0];
 		disk_status_log.push_back(message.mtext[0]);
@@ -84,29 +84,47 @@ int process_request(struct msgbuff message)
 		killpg(disk_id,SIGUSR1);
 		int disk_response=disk_status();
 		cout<<"disk_response "<<disk_response<<endl;
+		
 		if( disk_response!=-1 )
 		{
-
+			
 			if(message.mtext[0] == 'D' && disk_response >0)
 			{
-				kernel_response.mtext[0]=1;
+				//char * str = "1";
+				strcpy(kernel_response.mtext,"1");
+				//kernel_response.mtext="1";
 				
 				int send = msgsnd(disk_down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
+				cout<<"message.mtext "<<message.mtext<<endl;
 				disk_log.push_back(message);
 				latency=1;
 			}
-			else 	kernel_response.mtext[0]=3;
+			else 	
+				{
+					//char * str = "3";
+					strcpy(kernel_response.mtext,"3");
+				}
+				//kernel_response.mtext="3";
 			if(message.mtext[0] == 'A' && disk_response <10)
 			{
-				kernel_response.mtext[0]=0;
+				//char * str = "0";
+				strcpy(kernel_response.mtext,"0");
+				//kernel_response.mtext="0";
 				int send = msgsnd(disk_down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
+				cout<<"message.mtext "<<message.mtext<<endl;
 				disk_log.push_back(message);
 				latency=3;
 			}
-			else 	kernel_response.mtext[0]=2;
+			else 	
+			{
+				//char * str = "2";
+				strcpy(kernel_response.mtext,"2");
+				//kernel_response.mtext="2";
+			}
 			kernel_response.mtype=message.mtype;
 			int send = msgsnd(process_down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
-			response_log.push_back(kernel_response.mtext[0]);
+			cout<<"kernel_response.mtext "<<kernel_response.mtext<<endl;
+			response_log.push_back(kernel_response.mtext);
 		}
 
 

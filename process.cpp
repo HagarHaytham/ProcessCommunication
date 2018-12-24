@@ -64,6 +64,9 @@ void SendMsg()
 
 }
 
+
+
+
 // recieve via down queue
 void RecieveMsg()
 {
@@ -73,10 +76,10 @@ void RecieveMsg()
 	/* receive all types of messages */
 	rec_val = msgrcv(downMsgqId, &message, sizeof(message.mtext),getpid(), !IPC_NOWAIT);  
 
-	//if(rec_val == -1)
-	//	perror("Error in receive");
+	if(rec_val == -1)
+		perror("Error in receive");
     //modify ??
-    if (message.mtext == "0")
+    else if (message.mtext == "0")
         cout << "Successful ADD\n";
     else if (message.mtext == "1")
         cout << "Successful DEL\n";
@@ -98,6 +101,7 @@ bool InputRead(string fileName){
 			//remove first space
 			inputs.data.replace(0,1,"");
 			inputList.push_back(inputs);
+			
 		}
 		inputFile.close();
 		return true;
@@ -128,11 +132,12 @@ bool CheckAvailableMsg()
 
 int main()
 {   
+	printf("Begin Of Process MAIN \n");
     string fileName = "";
     //when the process receives SIGUSR2 it increments the clk variable
     signal(SIGUSR2,IncClk);
          
-    cout << "Please enter the file name\n"; //modify ??
+    //cout << "Please enter the file name\n"; //modify ??
     //cin >> fileName;
     fileName="input.txt";
     if(!InputRead(fileName)) return 0;
@@ -140,6 +145,8 @@ int main()
     //modify ??
     upMsgqId = msgget(199, IPC_CREAT|0644);//199 for up // dummy values 
 	downMsgqId = msgget(200, IPC_CREAT|0644);// 200 for down // kernel should have the same keys
+	cout<<"Process Up Queue ID "<<upMsgqId<<endl;
+	cout<<"Process down Queue ID "<<downMsgqId<<endl;
 	if(upMsgqId == -1 ||downMsgqId == -1 )
 	{	
 		perror("Error in create");

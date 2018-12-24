@@ -41,6 +41,7 @@ void IncClk(int signum) // Handler for SIGUSR2
 {
 	prev_clk=clk;
 	clk++;
+	cout<<"MY clk got incremented"<<clk<<endl;
 }
 
 //send via up queue
@@ -68,7 +69,7 @@ void SendMsg(int signum) // Handler for SIGUSR1
 	if(send_val == -1)
 		perror("Error in send");
 	else
-	cout<<" response sent "<<endl;
+	cout<<" response sent "<<message.mtext<<endl;
 }
 
 char  * RemoveFirstLetter(char *msg)
@@ -150,11 +151,12 @@ void RecieveMsg()
 
 	//rec_val=1;// ay klam delwa2ty
 	/* receive all types of messages */
-	rec_val = msgrcv(downMsgqId, &message, sizeof(message.mtext),0, IPC_NOWAIT);  
+	rec_val = msgrcv(downMsgqId, &message, sizeof(message.mtext),0, !IPC_NOWAIT);  
 
-	//if(rec_val == -1)
-		//perror("Error in receive");
 	if(rec_val == -1)
+		perror("Errrrrror in receive");
+	//if(rec_val == -1)
+	else
 	{
 		char *str;
 		strcpy(str,message.mtext);
@@ -188,6 +190,8 @@ int main()
 	
 	upMsgqId = msgget(99, IPC_CREAT|0644);//99 for up // dummy values 
 	downMsgqId = msgget(100, IPC_CREAT|0644);// 100 for down // kernel should have the same keys
+	cout<<"Disk Up Queue ID "<<upMsgqId<<endl;
+	cout<<"Disk down Queue ID "<<downMsgqId<<endl;
 	sendMyID();
 	if(upMsgqId == -1 ||downMsgqId == -1 ){	
 		perror("Error in create");
