@@ -124,8 +124,8 @@ int main()
     InputRead(fileName);
     
     //modify ??
-    upMsgqId = msgget(99, IPC_CREAT|0644);//99 for up // dummy values 
-	downMsgqId = msgget(100, IPC_CREAT|0644);// 100 for down // kernel should have the same keys
+    upMsgqId = msgget(199, IPC_CREAT|0644);//199 for up // dummy values 
+	downMsgqId = msgget(200, IPC_CREAT|0644);// 200 for down // kernel should have the same keys
 	if(upMsgqId == -1 ||downMsgqId == -1 )
 	{	
 		perror("Error in create");
