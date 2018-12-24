@@ -30,6 +30,7 @@ int process_up_queue = msgget(process_up, IPC_CREAT|0644);//99 for up // dummy v
 int process_down_queue = msgget(process_down, IPC_CREAT|0644);// 100 for down // kernel should have the same keys
 struct msgbuff
 {
+
    long mtype; // must be long
    char request_type;
    char mtext[64];
@@ -98,6 +99,70 @@ else
 
 }
 return 	latency;
+
+	long mtype; // must be long
+	char request_type;
+	char mtext[64];
+};
+
+void initialize(int disk_up_queue,int process_up_queue)
+{
+	printf("didn't get The ID From DISK yet");
+	struct msgbuff first_message;
+	int recieve = msgrcv(disk_up_queue, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT);   // receive on up , send on down
+	disk_id=first_message.mtype;
+	printf("GOT The ID From DISK , READY FOR comm %d",disk_id);
+	recieve = msgrcv(process_up_queue, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT); // receive on up , send on down   
+	process_list.push_back(first_message.mtype);
+
+}
+int disk_status()
+{
+	struct msgbuff message;
+	int recieve = msgrcv(disk_up_queue, &message, sizeof(message.mtext),0, !IPC_NOWAIT); 
+	if(recieve != -1 && message.mtype==disk_id )
+		return message.request_type;
+	return -1;
+}
+int process_request(struct msgbuff message)
+{
+	int latency=0;
+	if(message.request_type == 'I')
+	{
+		process_list[process_counter++]=(int)message.mtype;
+
+	}
+	else
+	{ 
+		struct msgbuff kernel_response;
+
+		killpg(disk_id,SIGUSR1);
+		int disk_response=disk_status();
+
+		if( disk_response!=-1 )
+		{
+
+			if(message.request_type == 'D' && disk_response >0)
+			{
+				kernel_response.request_type=1;
+				int send = msgsnd(disk_down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
+				latency=1;
+			}
+			else 	kernel_response.request_type=3;
+			if(message.request_type == 'A' && disk_response <10)
+			{
+				kernel_response.request_type=0;
+				int send = msgsnd(disk_down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
+				latency=3;
+			}
+			else 	kernel_response.request_type=2;
+			kernel_response.mtype=message.mtype;
+			int send = msgsnd(process_down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
+		}
+
+	}
+	return 	latency;
+
 }
 
 
@@ -105,6 +170,7 @@ return 	latency;
 int main()
 {
 
+	printf("Begin Of Kernel MAIN \n");
 	initialize(disk_up_queue,process_up_queue);
 	
 	int clk=0;
@@ -132,6 +198,7 @@ int main()
 		clk++;
 		prev_time = current_time;
 	}
+	
 	}
 	return 0;
 }
