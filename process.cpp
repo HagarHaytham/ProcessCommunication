@@ -14,6 +14,7 @@
 #include<vector>
 #include<fstream>
 #include<algorithm>
+#include<cstring>
 using namespace std;
 
 struct msgbuff
@@ -50,7 +51,8 @@ void SendMsg()
 	struct msgbuff message;
 
 	message.mtype = getpid();
-	strcpy(message.mtext, msg);
+	//modify?? check right msg
+	strcpy(message.mtext, msg.c_str());
 
 	// busy wait until msg sent
 	send_val = msgsnd(upMsgqId, &message, sizeof(message.mtext), !IPC_NOWAIT);
@@ -85,16 +87,23 @@ void RecieveMsg()
 //modify ??: check a valid input
 //Assume: Time are unique
 //Read input file 
-void InputRead(string fileName){
+bool InputRead(string fileName){
     content inputs; 
 	ifstream inputFile(fileName.c_str()); //the constructor does not take string& until C++11. Prior to C++11, it only takes const char *
 	if(inputFile.is_open()){
-		while(inputFile >> inputs.time >> inputs.operation >> inputs.data ){
+		while(inputFile >> inputs.time >> inputs.operation){
+			getline(cin,inputs.data);
+			//remove first space
+			inputs.data.replace(0,1,"");
 			inputList.push_back(inputs);
 		}
 		inputFile.close();
+		return true;
 	}
-	else cout <<"Can't open " << fileName << " file\n";
+	else{
+		cout <<"Can't open " << fileName << " file\n";
+		return false;
+	}
 }
 
 bool CheckAvailableMsg()
@@ -107,6 +116,8 @@ bool CheckAvailableMsg()
             else
                 msg += "D";
            msg += inputList[i].data;
+		   //remove the sent msg
+		   inputList.erase (inputList.begin()+i);
            return true;
         }
     }
@@ -121,7 +132,7 @@ int main()
          
     cout << "Please enter the file name\n"; //modify ??
     cin >> fileName;
-    InputRead(fileName);
+    if(!InputRead(fileName)) return 0;
     
     //modify ??
     upMsgqId = msgget(199, IPC_CREAT|0644);//199 for up // dummy values 
@@ -132,6 +143,8 @@ int main()
 		exit(-1);
 	}
 
+	//SendIntializationMsg
+	SendMsg();
     while(1){
         if(CheckAvailableMsg()){
             SendMsg();
