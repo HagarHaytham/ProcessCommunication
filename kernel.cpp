@@ -62,21 +62,24 @@ void initialize()
 	}
 	cout<<"GOT The ID From DISK , READY FOR comm "<<disk_id<<endl;
 }
-int disk_status()
+bool  canDelete(char * diskStatus,char slotNo)
+{
+	int idx =atoi(slotNo);
+	char slot = diskStatus[idx];
+	if (slot == "0")// empty slot
+		return false;
+	return true;
+}
+char * disk_status()
 {
 	// recieve msg : mtype hwa el disk status , msg hya el free slots 
 	struct msgbuff message;
 	int recieve = msgrcv(up_queue, &message, sizeof(message.mtext),disk_id, !IPC_NOWAIT); 
 	if(recieve != -1 )
 	{
-
-		//return message.mtext;
-		disk_status_log.push_back(message.mtext[0]);
-		// get free slots
-		int FreeSlots =atoi(message.mtext);
-		cout<<"Got Free Slots "<<FreeSlots;
-		return FreeSlots; 
-
+		//disk_status_log.push_back(message.mtext[0]);
+		//LOG TO FILE 3LAAAA TOOOOOOOOOL	
+		return message.mtext;
 	}
 	return -1;
 }
@@ -87,24 +90,24 @@ int process_request(struct msgbuff message)
 	struct msgbuff kernel_response;
 
 	killpg(disk_id,SIGUSR1);
-	int disk_response=disk_status();
+	char * disk_response=disk_status();
 	cout<<"disk_response "<<disk_response<<endl;
 
 	if( disk_response!=-1 )
 	{
 		kernel_response.mtype=message.mtype;
 		message.mtype=disk_id;
-		if(message.mtext[0] == 'D' && disk_response >0) //modify
+		if(message.mtext[0] == 'D' && canDelete(disk_response,message.mtext[1])) 
 		{
-			strcpy(kernel_response.mtext,"1");
+			strcpy(kernel_response.mtext,"1");//successful delete
 			int send = msgsnd(down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
 			cout<<"message.mtext "<<message.mtext<<endl;
 			disk_log.push_back(message);
 			latency=1;
 		}
 
-		else 	
-			strcpy(kernel_response.mtext,"3");
+		else if (message.mtext[0] == 'D')
+			strcpy(kernel_response.mtext,"3"); // unable to delete
 
 		if(message.mtext[0] == 'A' && disk_response <10)
 		{
