@@ -60,13 +60,19 @@ void initialize()
 		if(first_message.mtext[0]=='D')
 			disk_id=first_message.mtype;
 		else if(first_message.mtext[0]=='P')
-			process_list[process_counter++]=first_message.mtype;
+		{
+			process_list.push_back(first_message.mtype);
+			process_counter++;
+		}
 		////////
 		recieve = msgrcv(up_queue, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT);   // receive on up , send on down
 		if(first_message.mtext[0]=='D')
 			disk_id=first_message.mtype;
 		else if(first_message.mtext[0]=='P')
-			process_list[process_counter++]=first_message.mtype;
+		{
+			process_list.push_back(first_message.mtype);
+			process_counter++;
+		}
 	//}
 	cout<<"GOT The ID From DISK , READY FOR comm "<<disk_id<<endl;
 }
@@ -89,6 +95,7 @@ bool  canAdd(char *diskStatus)
 				break;
 			}
 	}
+	cout<<"Can Add Function"<<cnt<<endl;
 	if (cnt>0)
 		return true;
 	return false;
@@ -109,7 +116,7 @@ char * disk_status()
 	string str ="-1";
 	return const_cast<char*>(str.c_str());
 }
-int process_request(struct msgbuff message)
+int process_request(struct msgbuff message1)
 {
 	int latency=0;
 
@@ -121,40 +128,40 @@ int process_request(struct msgbuff message)
 
 	if( disk_response!="-1" )
 	{
-		kernel_response.mtype=message.mtype;
-		message.mtype=disk_id;
-		if(message.mtext[0] == 'D' && canDelete(disk_response,message.mtext[1])) //modify
+		kernel_response.mtype=message1.mtype;
+		message1.mtype=disk_id;
+		if(message1.mtext[0] == 'D' && canDelete(disk_response,message1.mtext[1])) //modify
 		{
 			strcpy(kernel_response.mtext,"1");
-			int send = msgsnd(down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
-			cout<<"message.mtext "<<message.mtext<<endl;
+			int send = msgsnd(down_queue, &message1, sizeof(message1.mtext), IPC_NOWAIT);
+			cout<<"message1.mtext "<<message1.mtext<<endl;
 			outputFile << clk <<" Msg to disk "<< kernel_response.mtext << endl;
 			latency=1;
 		}
 
-		else if (message.mtext[0] == 'D')
+		else if (message1.mtext[0] == 'D')
 			strcpy(kernel_response.mtext,"3");
 
-		if(message.mtext[0] == 'A' && canAdd(disk_response))
+		if(message1.mtext[0] == 'A' && canAdd(disk_response))
 		{
 
 			strcpy(kernel_response.mtext,"0");// successful  add 
-			int send = msgsnd(down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
+			int send = msgsnd(down_queue, &message1, sizeof(message1.mtext), IPC_NOWAIT);
 
-			cout<<"message.mtext "<<message.mtext<<endl;
+			cout<<"message1.mtext "<<message1.mtext<<endl;
 			outputFile << clk <<" Msg to disk "<< kernel_response.mtext << endl;
 			latency=3;
 		}
-		else 	
+		else 
 			strcpy(kernel_response.mtext,"2");// unable to add 
 
 
-		int send = msgsnd(down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
+		int send = msgsnd(down_queue, &kernel_response, sizeof(kernel_response.mtext), IPC_NOWAIT);
 		cout<<"kernel_response.mtext "<<kernel_response.mtext<<endl;
 		outputFile << clk <<" kernel_response "<< kernel_response.mtext << endl;
 	}
 
-
+	message_log.erase (message_log.begin());
 	return 	latency;
 
 }

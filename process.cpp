@@ -101,7 +101,7 @@ bool InputRead(string fileName){
 			//remove first space
 			inputs.data.replace(0,1,"");
 			inputList.push_back(inputs);
-			
+			cout<<"time "<<inputs.time<<" operation "<<inputs.operation<<" data "<<inputs.data <<endl;
 		}
 		inputFile.close();
 		return true;
@@ -122,6 +122,7 @@ bool CheckAvailableMsg()
             else
                 msg += "D";
            msg += inputList[i].data;
+		cout<<"MSG SENT FROM PROCESS "<<msg<<endl;
 		   //remove the sent msg
 		   inputList.erase (inputList.begin()+i);
            return true;
@@ -135,7 +136,7 @@ int main()
 	printf("Begin Of Process MAIN \n");
     string fileName = "";
     //when the process receives SIGUSR2 it increments the clk variable
-    //signal(SIGUSR2,IncClk);
+    signal(SIGUSR2,IncClk);
          
     //cout << "Please enter the file name\n"; //modify ??
     //cin >> fileName;

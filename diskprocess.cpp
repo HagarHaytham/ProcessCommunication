@@ -98,6 +98,7 @@ void Add(char * msg)
 		i++;
 	if (i!=NoOfSlots) 
 	{
+		cout<<"I am Adding Now "<<msg<<endl;
 		strcpy(Slots[i],msg);
 		freeSlots-=1;
 		slotfull[i]=true;
@@ -124,14 +125,15 @@ void RecieveMsg()
 
 	//rec_val=1;// ay klam delwa2ty
 	/* receive all types of messages */
-	rec_val = msgrcv(downMsgqId, &message, sizeof(message.mtext),0, !IPC_NOWAIT);  
+	rec_val = msgrcv(downMsgqId, &message, sizeof(message.mtext),getpid(), !IPC_NOWAIT);  
 
 	if(rec_val == -1)
 		perror("Errrrrror in receive");
 	//if(rec_val == -1)
 	else
 	{
-		char *str;
+		
+		char *str=new char [64] ;
 		strcpy(str,message.mtext);
 		cout<<" recieved "<<message.mtext<<endl;
 		if (str[0]=='A')
