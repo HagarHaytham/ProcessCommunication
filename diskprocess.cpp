@@ -80,11 +80,12 @@ void sendMyID()
 	struct msgbuff message;
 
 	message.mtype = myId;
-	strcpy(message.mtext,"d");///// check that with reham
+	strcpy(message.mtext,"D");
 	
 	// busy wait until msg sent 
 	send_val = msgsnd(upMsgqId, &message, sizeof(message.mtext), IPC_NOWAIT);
 	printf("Sending MY Id to Kernel %d\n",myId);
+	cout<<message.mtext<<endl;
 	if(send_val == -1)
 		perror("Errror in send");
 }

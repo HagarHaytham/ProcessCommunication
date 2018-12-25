@@ -39,6 +39,7 @@ vector <msgbuff> message_log;
 vector <long> process_list;
 int up_queue = msgget(disk_up, IPC_CREAT|0644);//99 for up // dummy values 
 int down_queue = msgget(disk_down, IPC_CREAT|0644);// 100 for down // kernel should have the same keys
+struct msgbuff message;
 
 int get_time()
 {
@@ -53,14 +54,20 @@ void initialize()
 	printf("didn't get The ID From DISK yet");
 	struct msgbuff first_message;
 	cout<<"up queue id = "<<up_queue<<endl;
-	for(int i=0;i<2;i++)
-	{
+	//for(int i=0;i<2;i++)
+	//{
 		int recieve = msgrcv(up_queue, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT);   // receive on up , send on down
 		if(first_message.mtext[0]=='D')
 			disk_id=first_message.mtype;
 		else if(first_message.mtext[0]=='P')
 			process_list[process_counter++]=first_message.mtype;
-	}
+		////////
+		recieve = msgrcv(up_queue, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT);   // receive on up , send on down
+		if(first_message.mtext[0]=='D')
+			disk_id=first_message.mtype;
+		else if(first_message.mtext[0]=='P')
+			process_list[process_counter++]=first_message.mtype;
+	//}
 	cout<<"GOT The ID From DISK , READY FOR comm "<<disk_id<<endl;
 }
 bool  canDelete(char * diskStatus,char slotNo)
@@ -89,14 +96,14 @@ bool  canAdd(char *diskStatus)
 char * disk_status()
 {
 	// recieve msg : mtype hwa el disk status , msg hya el free slots 
-	struct msgbuff message;
+	
 	int recieve = msgrcv(up_queue, &message, sizeof(message.mtext),disk_id, !IPC_NOWAIT); 
 	if(recieve != -1 )
 	{
 		//disk_status_log.push_back(message.mtext[0]);
 		//LOG TO FILE 3LAAAA TOOOOOOOOOL
-		char * str1 ;
-		strcpy(str1,message.mtext);	
+		//char * str1 ;
+		//strcpy(str1,message.mtext);	
 		return message.mtext;
 	}
 	string str ="-1";
@@ -108,7 +115,7 @@ int process_request(struct msgbuff message)
 
 	struct msgbuff kernel_response;
 
-	killpg(disk_id,SIGUSR1);
+	kill(disk_id,SIGUSR1);
 	char * disk_response=disk_status();
 	cout<<"disk_response "<<disk_response<<endl;
 
@@ -160,7 +167,7 @@ int main()
 
 	int current_time=0;
 	int latency=0;
-	struct msgbuff message;
+	//struct msgbuff message;
 	int prev_time=get_time();
 	while(1)
 	{
@@ -187,8 +194,8 @@ int main()
 			if(latency > 0)
 				latency--;
 			for(int i=0;i<process_list.size();i++)
-				killpg(process_list[i],SIGUSR2);
-			killpg(disk_id,SIGUSR2);
+				kill(process_list[i],SIGUSR2);
+			kill(disk_id,SIGUSR2);
 			for(int i=0;i<message_log.size();i++)
 			{
 				if(latency ==0)

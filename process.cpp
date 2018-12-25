@@ -143,8 +143,8 @@ int main()
     if(!InputRead(fileName)) return 0;
     
     //modify ??
-    upMsgqId = msgget(199, IPC_CREAT|0644);//199 for up // dummy values 
-	downMsgqId = msgget(200, IPC_CREAT|0644);// 200 for down // kernel should have the same keys
+    upMsgqId = msgget(99, IPC_CREAT|0644);//199 for up // dummy values 
+	downMsgqId = msgget(100, IPC_CREAT|0644);// 200 for down // kernel should have the same keys
 	cout<<"Process Up Queue ID "<<upMsgqId<<endl;
 	cout<<"Process down Queue ID "<<downMsgqId<<endl;
 	if(upMsgqId == -1 ||downMsgqId == -1 )
@@ -154,6 +154,7 @@ int main()
 	}
 
 	//SendIntializationMsg
+	msg="P";
 	SendMsg();
     while(1){
         if(CheckAvailableMsg()){
