@@ -20,8 +20,8 @@ using namespace std::chrono;
 struct msgbuff
 {
 
-   long mtype; // must be long
-   char mtext[64];
+	long mtype; // must be long
+	char mtext[64];
 };
 
 const int disk_type =0;
@@ -47,18 +47,18 @@ int get_time()
 }
 
 
-void initialize(int disk_up_queue,int process_up_queue)
+void initialize()
 {
 	printf("didn't get The ID From DISK yet");
 	struct msgbuff first_message;
 	cout<<"up queue id = "<<disk_up_queue<<endl;
 	for(int i=0;i<2;i++)
 	{
-	int recieve = msgrcv(up_queue, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT);   // receive on up , send on down
-	if(first_message.mtext[0]=='D')
-		disk_id=first_message.mtype;
-	else if(first_message.mtext[0]=='P')
-		process_list[process_counter++]=first_message.mtype;
+		int recieve = msgrcv(up_queue, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT);   // receive on up , send on down
+		if(first_message.mtext[0]=='D')
+			disk_id=first_message.mtype;
+		else if(first_message.mtext[0]=='P')
+			process_list[process_counter++]=first_message.mtype;
 	}
 	cout<<"GOT The ID From DISK , READY FOR comm "<<disk_id<<endl;
 }
@@ -76,7 +76,7 @@ int disk_status()
 		int FreeSlots =atoi(message.mtext);
 		cout<<"Got Free Slots "<<FreeSlots;
 		return FreeSlots; 
-	
+
 	}
 	return -1;
 }
@@ -84,49 +84,46 @@ int process_request(struct msgbuff message)
 {
 	int latency=0;
 
-		struct msgbuff kernel_response;
+	struct msgbuff kernel_response;
 
-		killpg(disk_id,SIGUSR1);
-		int disk_response=disk_status();
-		cout<<"disk_response "<<disk_response<<endl;
-		
-		if( disk_response!=-1 )
+	killpg(disk_id,SIGUSR1);
+	int disk_response=disk_status();
+	cout<<"disk_response "<<disk_response<<endl;
+
+	if( disk_response!=-1 )
+	{
+		kernel_response.mtype=message.mtype;
+		message.mtype=disk_id;
+		if(message.mtext[0] == 'D' && disk_response >0) //modify
 		{
-			kernel_response.mtype=message.mtype;
-			message.mtype=disk_id;
-			if(message.mtext[0] == 'D' && disk_response >10)
-			{
-
-
-				
-				strcpy(kernel_response.mtext,"1");
-				int send = msgsnd(down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
-				cout<<"message.mtext "<<message.mtext<<endl;
-				disk_log.push_back(message);
-				latency=1;
-			}
-
-			else 	
-					strcpy(kernel_response.mtext,"3");
-
-			if(message.mtext[0] == 'A' && disk_response <10)
-			{
-
-				strcpy(kernel_response.mtext,"0");// successful  add 
-				int send = msgsnd(down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
-
-				cout<<"message.mtext "<<message.mtext<<endl;
-				disk_log.push_back(message);
-				latency=3;
-			}
-			else 	
-				strcpy(kernel_response.mtext,"2");// unable to add 
-
-		 	
-			int send = msgsnd(down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
-			cout<<"kernel_response.mtext "<<kernel_response.mtext<<endl;
-			response_log.push_back(kernel_response.mtext);
+			strcpy(kernel_response.mtext,"1");
+			int send = msgsnd(down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
+			cout<<"message.mtext "<<message.mtext<<endl;
+			disk_log.push_back(message);
+			latency=1;
 		}
+
+		else 	
+			strcpy(kernel_response.mtext,"3");
+
+		if(message.mtext[0] == 'A' && disk_response <10)
+		{
+
+			strcpy(kernel_response.mtext,"0");// successful  add 
+			int send = msgsnd(down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
+
+			cout<<"message.mtext "<<message.mtext<<endl;
+			disk_log.push_back(message);
+			latency=3;
+		}
+		else 	
+			strcpy(kernel_response.mtext,"2");// unable to add 
+
+
+		int send = msgsnd(down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
+		cout<<"kernel_response.mtext "<<kernel_response.mtext<<endl;
+		response_log.push_back(kernel_response.mtext);
+	}
 
 
 	return 	latency;
@@ -139,8 +136,8 @@ int main()
 {
 
 	printf("Begin Of Kernel MAIN \n");
-	initialize(up_queue,up_queue);
-	
+	initialize();
+
 	int clk=-1;
 	int current_time=0;
 	int latency=0;
@@ -148,37 +145,37 @@ int main()
 	int prev_time=get_time();
 	while(1)
 	{
-	current_time=get_time();
-	int recieve = msgrcv(up_queue, &message, sizeof(message.mtext),0, IPC_NOWAIT);  
-	if(recieve !=-1 )
-	{
-	cout<<" recieved message "<<message.mtext<<endl;
-	int i=0;
-	for(i=0;i<process_list.size();i++)
-		if(message.mtype == process_list[i])
-			break;
-	if(i==process_list.size())
-	process_list.push_back(message.mtype);
-	message_log.push_back(message);
-	}
-	
-	if(current_time-prev_time == 1)
-	{
-	
-	prev_time = current_time;
-	clk++;
-	if(latency > 0)
-	latency--;
-	for(int i=0;i<process_list.size();i++)
-	killpg(process_list[i],SIGUSR2);
-	killpg(disk_id,SIGUSR2);
-	for(int i=0;i<message_log.size();i++)
+		current_time=get_time();
+		int recieve = msgrcv(up_queue, &message, sizeof(message.mtext),0, IPC_NOWAIT);  
+		if(recieve !=-1 )
 		{
-		if(latency ==0)
-		latency=process_request(message);
+			cout<<" recieved message "<<message.mtext<<endl;
+			int i=0;
+			for(i=0;i<process_list.size();i++)
+				if(message.mtype == process_list[i])
+					break;
+			if(i==process_list.size())
+				process_list.push_back(message.mtype);
+			message_log.push_back(message);
 		}
-	}	
-}
+
+		if(current_time-prev_time == 1)
+		{
+
+			prev_time = current_time;
+			clk++;
+			if(latency > 0)
+				latency--;
+			for(int i=0;i<process_list.size();i++)
+				killpg(process_list[i],SIGUSR2);
+			killpg(disk_id,SIGUSR2);
+			for(int i=0;i<message_log.size();i++)
+			{
+				if(latency ==0)
+					latency=process_request(message);
+			}
+		}	
+	}
 	return 0;
 }
 
