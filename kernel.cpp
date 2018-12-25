@@ -15,6 +15,7 @@
 #include <vector>
 #include <string>
 #include<fstream>
+#include <cstring>
 using namespace std;
 using namespace std::chrono;
 
@@ -51,7 +52,7 @@ void initialize()
 {
 	printf("didn't get The ID From DISK yet");
 	struct msgbuff first_message;
-	cout<<"up queue id = "<<disk_up_queue<<endl;
+	cout<<"up queue id = "<<up_queue<<endl;
 	for(int i=0;i<2;i++)
 	{
 		int recieve = msgrcv(up_queue, &first_message, sizeof(first_message.mtext),0, !IPC_NOWAIT);   // receive on up , send on down
@@ -64,9 +65,9 @@ void initialize()
 }
 bool  canDelete(char * diskStatus,char slotNo)
 {
-	int idx =atoi(slotNo);
-	char slot = diskStatus[idx];
-	if (slot == "0")// empty slot
+	int idx =int(slotNo) -48;
+	//char slot = diskStatus[idx];
+	if (diskStatus[idx] == '0')// empty slot
 		return false;
 	return true;
 }
@@ -75,7 +76,7 @@ bool  canAdd(char *diskStatus)
 	int cnt =0;
 	for (int i=0;i<10;i++)
 	{
-		if(diskStatus[i]=="0")// empty slot
+		if(diskStatus[i]=='0')// empty slot
 			{
 				cnt++;
 				break;
@@ -93,10 +94,13 @@ char * disk_status()
 	if(recieve != -1 )
 	{
 		//disk_status_log.push_back(message.mtext[0]);
-		//LOG TO FILE 3LAAAA TOOOOOOOOOL	
+		//LOG TO FILE 3LAAAA TOOOOOOOOOL
+		char * str1 ;
+		strcpy(str1,message.mtext);	
 		return message.mtext;
 	}
-	return -1;
+	string str ="-1";
+	return const_cast<char*>(str.c_str());
 }
 int process_request(struct msgbuff message)
 {
@@ -108,7 +112,7 @@ int process_request(struct msgbuff message)
 	char * disk_response=disk_status();
 	cout<<"disk_response "<<disk_response<<endl;
 
-	if( disk_response!=-1 )
+	if( disk_response!="-1" )
 	{
 		kernel_response.mtype=message.mtype;
 		message.mtype=disk_id;
