@@ -95,7 +95,7 @@ bool  canAdd(char *diskStatus)
 				break;
 			}
 	}
-	cout<<"Can Add Function"<<cnt<<endl;
+	cout<<"Can Add Function  my cnt is : "<<cnt<<endl;
 	if (cnt>0)
 		return true;
 	return false;
@@ -107,10 +107,7 @@ char * disk_status()
 	int recieve = msgrcv(up_queue, &message, sizeof(message.mtext),disk_id, !IPC_NOWAIT); 
 	if(recieve != -1 )
 	{
-		//disk_status_log.push_back(message.mtext[0]);
-		//LOG TO FILE 3LAAAA TOOOOOOOOOL
-		//char * str1 ;
-		//strcpy(str1,message.mtext);	
+		outputFile << clk <<" disk Response "<<message.mtext<<endl;
 		return message.mtext;
 	}
 	string str ="-1";
@@ -135,21 +132,21 @@ int process_request(struct msgbuff message1)
 			strcpy(kernel_response.mtext,"1");
 			int send = msgsnd(down_queue, &message1, sizeof(message1.mtext), IPC_NOWAIT);
 			cout<<"message1.mtext "<<message1.mtext<<endl;
-			outputFile << clk <<" Msg to disk "<< kernel_response.mtext << endl;
+			outputFile << clk <<" Msg to disk "<< message1.mtext << " Disk ID "<< message1.mtype<< endl;
 			latency=1;
 		}
 
 		else if (message1.mtext[0] == 'D')
 			strcpy(kernel_response.mtext,"3");
 
-		if(message1.mtext[0] == 'A' && canAdd(disk_response))
+		else if(message1.mtext[0] == 'A' && canAdd(disk_response))
 		{
 
 			strcpy(kernel_response.mtext,"0");// successful  add 
 			int send = msgsnd(down_queue, &message1, sizeof(message1.mtext), IPC_NOWAIT);
 
 			cout<<"message1.mtext "<<message1.mtext<<endl;
-			outputFile << clk <<" Msg to disk "<< kernel_response.mtext << endl;
+			outputFile << clk <<" Msg to disk "<<message1.mtext<< " Disk ID "<< message1.mtype << endl;
 			latency=3;
 		}
 		else 
@@ -158,7 +155,7 @@ int process_request(struct msgbuff message1)
 
 		int send = msgsnd(down_queue, &kernel_response, sizeof(kernel_response.mtext), IPC_NOWAIT);
 		cout<<"kernel_response.mtext "<<kernel_response.mtext<<endl;
-		outputFile << clk <<" kernel_response "<< kernel_response.mtext << endl;
+		outputFile << clk <<" kernel_response "<< kernel_response.mtext <<" the id is :"<< kernel_response.mtype<< endl;
 	}
 
 	message_log.erase (message_log.begin());
@@ -170,6 +167,7 @@ int main()
 {
 	
 	printf("Begin Of Kernel MAIN \n");
+	outputFile<<"Kernel ID "<<getpid()<<endl;
 	initialize();
 
 	int current_time=0;
@@ -182,15 +180,18 @@ int main()
 		int recieve = msgrcv(up_queue, &message, sizeof(message.mtext),0, IPC_NOWAIT);  
 		if(recieve !=-1 )
 		{
-			cout<<" recieved message "<<message.mtext<<endl;
+			cout<<" request from process "<<message.mtext<<endl;
 			int i=0;
 			for(i=0;i<process_list.size();i++)
 				if(message.mtype == process_list[i])
 					break;
 			if(i==process_list.size())
 				process_list.push_back(message.mtype);
-			message_log.push_back(message);
-			outputFile << clk <<" recieved message " << message.mtext << endl;
+			if (message.mtext[0]!='P')
+			{
+				message_log.push_back(message);
+				outputFile << clk <<" request from process " << message.mtext << "The ID is " << message.mtype<< endl;
+			}
 		}
 
 		if(current_time-prev_time == 1)

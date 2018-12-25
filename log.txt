@@ -1,0 +1,23 @@
+Kernel ID 8649
+9 request from process A"Hello"The ID is 8652
+10 disk Response 0000000000
+10 Msg to disk A"Hello" Disk ID 8650
+10 kernel_response 0 the id is :8652
+10 request from process A"Hello"The ID is 8653
+12 request from process A"This is me"The ID is 8652
+13 disk Response 1000000000
+13 Msg to disk A"This is me" Disk ID 8650
+13 kernel_response 0 the id is :8652
+13 request from process A"This is me"The ID is 8653
+16 disk Response 1100000000
+16 Msg to disk A"This is me" Disk ID 8650
+16 kernel_response 0 the id is :8653
+19 disk Response 1110000000
+19 kernel_response 2 the id is :8650
+19 request from process D1The ID is 8652
+20 disk Response 1110000000
+20 Msg to disk D1 Disk ID 8650
+20 kernel_response 1 the id is :8652
+20 request from process D1The ID is 8653
+21 disk Response 1010000000
+21 kernel_response 3 the id is :8653

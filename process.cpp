@@ -30,7 +30,7 @@ struct content
     string data;
 };
 
-int clk = 0;
+int clk = -1;
 vector<content> inputList;
 string msg = "";
 key_t upMsgqId,
@@ -97,7 +97,7 @@ bool InputRead(string fileName){
 	ifstream inputFile(fileName.c_str()); //the constructor does not take string& until C++11. Prior to C++11, it only takes const char *
 	if(inputFile.is_open()){
 		while(inputFile >> inputs.time >> inputs.operation){
-			getline(cin,inputs.data);
+			getline(inputFile,inputs.data);
 			//remove first space
 			inputs.data.replace(0,1,"");
 			inputList.push_back(inputs);
