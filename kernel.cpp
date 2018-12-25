@@ -14,6 +14,7 @@
 #include <signal.h>
 #include <vector>
 #include <string>
+#include<fstream>
 using namespace std;
 using namespace std::chrono;
 
@@ -28,13 +29,12 @@ const int disk_type =0;
 const int process_type=1;
 const int disk_up=99;
 const int disk_down=100;
+ofstream outputFile("log.txt");
 
 int disk_id;
 int process_counter=0;
+int clk=-1;
 vector <msgbuff> message_log;
-vector <msgbuff> disk_log;
-vector <char *> response_log;
-vector <int> disk_status_log;
 vector <long> process_list;
 int up_queue = msgget(disk_up, IPC_CREAT|0644);//99 for up // dummy values 
 int down_queue = msgget(disk_down, IPC_CREAT|0644);// 100 for down // kernel should have the same keys
@@ -71,7 +71,8 @@ int disk_status()
 	{
 
 		//return message.mtext;
-		disk_status_log.push_back(message.mtext[0]);
+		outputFile << clk <<" Msg from disk "<< kernel_response.mtext << endl;
+		
 		// get free slots
 		int FreeSlots =atoi(message.mtext);
 		cout<<"Got Free Slots "<<FreeSlots;
@@ -99,7 +100,7 @@ int process_request(struct msgbuff message)
 			strcpy(kernel_response.mtext,"1");
 			int send = msgsnd(down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
 			cout<<"message.mtext "<<message.mtext<<endl;
-			disk_log.push_back(message);
+			outputFile << clk <<" Msg to disk "<< kernel_response.mtext << endl;
 			latency=1;
 		}
 
@@ -113,7 +114,7 @@ int process_request(struct msgbuff message)
 			int send = msgsnd(down_queue, &message, sizeof(message.mtext), IPC_NOWAIT);
 
 			cout<<"message.mtext "<<message.mtext<<endl;
-			disk_log.push_back(message);
+			outputFile << clk <<" Msg to disk "<< kernel_response.mtext << endl;
 			latency=3;
 		}
 		else 	
@@ -122,7 +123,7 @@ int process_request(struct msgbuff message)
 
 		int send = msgsnd(down_queue, &kernel_response, sizeof(message.mtext), IPC_NOWAIT);
 		cout<<"kernel_response.mtext "<<kernel_response.mtext<<endl;
-		response_log.push_back(kernel_response.mtext);
+		outputFile << clk <<" kernel_response "<< kernel_response.mtext << endl;
 	}
 
 
@@ -130,15 +131,12 @@ int process_request(struct msgbuff message)
 
 }
 
-
-
 int main()
 {
-
+	
 	printf("Begin Of Kernel MAIN \n");
 	initialize();
 
-	int clk=-1;
 	int current_time=0;
 	int latency=0;
 	struct msgbuff message;
@@ -157,6 +155,7 @@ int main()
 			if(i==process_list.size())
 				process_list.push_back(message.mtype);
 			message_log.push_back(message);
+			outputFile << clk <<" recieved message " << message.mtext << endl;
 		}
 
 		if(current_time-prev_time == 1)
@@ -176,6 +175,8 @@ int main()
 			}
 		}	
 	}
+
+	outputFile.close();
 	return 0;
 }
 
